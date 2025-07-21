@@ -15,7 +15,7 @@ permissions:
   pull-requests: write
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ap-south-1
   AWS_ROLE_ARN: arn:aws:iam::436450225331:role/oidc-assume-role
 
 jobs:
@@ -52,19 +52,11 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::173003893026:role/OIDC-github-actions
-          aws-region: us-east-1
+          aws-region: ap-south-1
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Ensure ECR repository exists
-        run: |
-          aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
-          aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
-        env:
-          AWS_REGION: us-east-1
-          ECR_REPOSITORY: healthcare-app-dev-patient-service
 
       - name: Build, tag, and push image
         working-directory: application/patient-service
@@ -91,19 +83,11 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::173003893026:role/OIDC-github-actions
-          aws-region: us-east-1
+          aws-region: ap-south-1
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Ensure ECR repository exists
-        run: |
-          aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
-          aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
-        env:
-          AWS_REGION: us-east-1
-          ECR_REPOSITORY: healthcare-app-dev-appointment-service
 
       - name: Build, tag, and push image
         working-directory: application/appointment-service
@@ -131,22 +115,17 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::173003893026:role/OIDC-github-actions
-          aws-region: us-east-1
-
-      - name: Ensure ECS Cluster Exists
-        run: |
-          aws ecs describe-clusters --clusters healthcare-app-dev-cluster --region us-east-1 | grep '"status": "ACTIVE"' || \
-          aws ecs create-cluster --cluster-name healthcare-app-dev-cluster --region us-east-1
+          aws-region: ap-south-1
 
       - name: Update Patient Service (if exists)
         if: needs.build-patient-service.result == 'success'
         run: |
-          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-patient-service --region us-east-1 | grep '"status": "ACTIVE"' > /dev/null; then
+          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-patient-service --region ap-south-1 | grep '"status": "ACTIVE"' > /dev/null; then
             aws ecs update-service \
               --cluster healthcare-app-dev-cluster \
               --service healthcare-app-dev-patient-service \
               --force-new-deployment \
-              --region us-east-1
+              --region ap-south-1
           else
             echo "Patient ECS service not found. Skipping update."
           fi
@@ -154,31 +133,28 @@ jobs:
       - name: Update Appointment Service (if exists)
         if: needs.build-appointment-service.result == 'success'
         run: |
-          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-appointment-service --region us-east-1 | grep '"status": "ACTIVE"' > /dev/null; then
+          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-appointment-service --region ap-south-1 | grep '"status": "ACTIVE"' > /dev/null; then
             aws ecs update-service \
               --cluster healthcare-app-dev-cluster \
               --service healthcare-app-dev-appointment-service \
               --force-new-deployment \
-              --region us-east-1
+              --region ap-south-1
           else
             echo "Appointment ECS service not found. Skipping update."
           fi
 
       - name: Wait for services to stabilize (if found)
         run: |
-          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-patient-service --region us-east-1 | grep '"status": "ACTIVE"' > /dev/null; then
+          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-patient-service --region ap-south-1 | grep '"status": "ACTIVE"' > /dev/null; then
             aws ecs wait services-stable \
               --cluster healthcare-app-dev-cluster \
               --services healthcare-app-dev-patient-service \
-              --region us-east-1
+              --region ap-south-1
           fi
 
-          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-appointment-service --region us-east-1 | grep '"status": "ACTIVE"' > /dev/null; then
+          if aws ecs describe-services --cluster healthcare-app-dev-cluster --services healthcare-app-dev-appointment-service --region ap-south-1 | grep '"status": "ACTIVE"' > /dev/null; then
             aws ecs wait services-stable \
               --cluster healthcare-app-dev-cluster \
               --services healthcare-app-dev-appointment-service \
-              --region us-east-1
+              --region ap-south-1
           fi
-
-
-  

@@ -10,13 +10,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token:   write
-  contents:   write     
+  id-token: write
+  contents: write
   pull-requests: write
 
 env:
-  AWS_REGION: ap-south-1
-  AWS_ROLE_ARN: arn:aws:iam::436450225331:role/oidc-assume-role 
+  AWS_REGION: us-east-1
+  AWS_ROLE_ARN: arn:aws:iam::436450225331:role/oidc-assume-role
 
 jobs:
   detect-changes:
@@ -25,11 +25,10 @@ jobs:
     outputs:
       patient-service: ${{ steps.changes.outputs.patient-service }}
       appointment-service: ${{ steps.changes.outputs.appointment-service }}
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+
       - name: Detect Changes
         uses: dorny/paths-filter@v2
         id: changes
@@ -45,7 +44,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.patient-service == 'true'
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -62,12 +60,11 @@ jobs:
 
       - name: Ensure ECR repository exists
         run: |
-                aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
-                aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
+          aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
         env:
-         AWS_REGION: us-east-1
-         ECR_REPOSITORY: healthcare-app-dev-patient-service
-
+          AWS_REGION: us-east-1
+          ECR_REPOSITORY: healthcare-app-dev-patient-service
 
       - name: Build, tag, and push image
         working-directory: application/patient-service
@@ -86,7 +83,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.appointment-service == 'true'
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -103,8 +99,11 @@ jobs:
 
       - name: Ensure ECR repository exists
         run: |
-                aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
-                aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
+          aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
+          aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
+        env:
+          AWS_REGION: us-east-1
+          ECR_REPOSITORY: healthcare-app-dev-appointment-service
 
       - name: Build, tag, and push image
         working-directory: application/appointment-service
@@ -123,17 +122,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-patient-service, build-appointment-service]
     if: always() && (needs.build-patient-service.result == 'success' || needs.build-appointment-service.result == 'success') && github.ref == 'refs/heads/main'
-    
     environment:
       name: production
-    
     steps:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::173003893026:role/OIDC-github-actions
           aws-region: us-east-1
-          
+
       - name: Update Patient Service
         if: needs.build-patient-service.result == 'success'
         run: |
@@ -157,7 +154,6 @@ jobs:
               --cluster healthcare-app-dev-cluster \
               --services healthcare-app-dev-patient-service
           fi
-          
           if [[ "${{ needs.build-appointment-service.result }}" == "success" ]]; then
             aws ecs wait services-stable \
               --cluster healthcare-app-dev-cluster \

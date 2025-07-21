@@ -60,6 +60,15 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Ensure ECR repository exists
+        run: |
+                aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
+                aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
+        env:
+         AWS_REGION: ap-south-1
+         ECR_REPOSITORY: healthcare-app-dev-patient-service
+
+
       - name: Build, tag, and push image
         working-directory: application/patient-service
         env:
